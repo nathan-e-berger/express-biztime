@@ -40,6 +40,7 @@ class BadRequestError extends ExpressError {
 
 /** 403 FORBIDDEN error. */
 
+
 class ForbiddenError extends ExpressError {
   constructor(message = "Forbidden") {
     super(message, 403);

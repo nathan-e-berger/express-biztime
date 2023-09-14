@@ -8,12 +8,12 @@ const db = require("../db");
 const router = new express.Router();
 
 router.get("/", async function (req, res) {
-    const results = await db.query(
-        `SELECT *
+  const results = await db.query(
+    `SELECT *
         FROM companies`
-    );
-    const companies = results.rows;
-    return res.json({ companies });
+  );
+  const companies = results.rows;
+  return res.json({ companies });
 });
 
 /** GET /companies/[code]
@@ -21,17 +21,17 @@ router.get("/", async function (req, res) {
  * If the company given cannot be found, this should return a 404 status response.
  */
 router.get("/:code", async function (req, res) {
-    const { code } = req.params;
+  const { code } = req.params;
 
-    const results = await db.query(`SELECT * FROM companies WHERE code = $1`, [
-        code,
-    ]);
+  const results = await db.query(`SELECT * FROM companies WHERE code = $1`, [
+    code,
+  ]);
 
-    const company = results.rows[0];
+  const company = results.rows[0];
 
-    if (!company) throw new NotFoundError("Company not found");
+  if (!company) throw new NotFoundError("Company not found");
 
-    return res.json({ company });
+  return res.json({ company });
 });
 
 // POST /companies
@@ -39,23 +39,15 @@ router.get("/:code", async function (req, res) {
 // Needs to be given JSON like: {code, name, description}
 // Returns obj of new company: {company: {code, name, description}}
 router.post("/", validateBody, async function (req, res) {
-    // for(req.body )
-    //   if (req.body.code === undefined)
-    //       throw new BadRequestError("Please provide code, name, and description");
-    //   if (req.body.name === undefined)
-    //       throw new BadRequestError("Please provide code, name, and description");
-    //   if (req.body.description === undefined)
-    //       throw new BadRequestError("Please provide code, name, and description");
+  const { code, name, description } = req.body;
 
-    const { code, name, description } = req.body;
+  const results = await db.query(
+    `INSERT INTO companies(code, name, description) VALUES($1, $2, $3) RETURNING code, name, description`,
+    [code, name, description]
+  );
 
-    const results = await db.query(
-        `INSERT INTO companies(code, name, description) VALUES($1, $2, $3) RETURNING code, name, description`,
-        [code, name, description]
-    );
-
-    const company = results.rows[0];
-    return res.status(201).json({ company });
+  const company = results.rows[0];
+  return res.json({ company });
 });
 
 // PUT /companies/[code]
@@ -64,22 +56,32 @@ router.post("/", validateBody, async function (req, res) {
 // Needs to be given JSON like: {name, description}
 // Returns update company object: {company: {code, name, description}}
 router.put("/:code", async function (req, res) {
-    if (req.body.code === undefined)
-        throw new BadRequestError("Please provide code, name, and description");
-    if (req.body.name === undefined)
-        throw new BadRequestError("Please provide code, name, and description");
-    if (req.body.description === undefined)
-        throw new BadRequestError("Please provide code, name, and description");
+  const { name, description } = req.body;
+  const { code } = req.params;
 
-    const { code, name, description } = req.body;
+  const results = await db.query(
+    `UPDATE companies SET name=$2, description=$3
+      WHERE code = $1
+        RETURNING code, name, description`,
+    [code, name, description]
+  );
+  if (!results.rows.length) throw new BadRequestError("There doesnt seem to be anything here");
 
-    const results = await db.query(
-        `INSERT INTO companies(code, name, description) VALUES($1, $2, $3) RETURNING code, name, description`,
-        [code, name, description]
-    );
+  const company = results.rows[0];
+  return res.json({ company });
+});
 
-    const company = results.rows[0];
-    return res.status(201).json({ company });
+router.delete("/:code", async function (req, res) {
+  const { code } = req.params;
+
+  const results = await db.query(
+    `DELETE FROM companies
+      WHERE code = $1
+        RETURNING code`,
+    [code]
+  );
+  const { code: deletedCode } = results.rows;
+  return res.json(code);
 });
 
 module.exports = router;
